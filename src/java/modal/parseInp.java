@@ -45,10 +45,10 @@ public class parseInp  extends HttpServlet {
       String[] stastics = request.getParameterValues("stats");
       String periods = request.getParameter("periodic");
       String repeat_gran=null;
-      int[] weekDays=new int[7];
-      Arrays.fill(weekDays, -1);
-      int[] monthDays = new int[32]; 
-      Arrays.fill(monthDays, -1);
+   //   int[] weekDays=new int[7];
+   //   Arrays.fill(weekDays, -1);
+  //    int[] monthDays = new int[32]; 
+  //    Arrays.fill(monthDays, -1);
       String endDate=null;
       String occur_count=null;
       // get hostid and itemid 
@@ -76,12 +76,15 @@ public class parseInp  extends HttpServlet {
       dateUtil du = new dateUtil();
       long from = du.epochConvertor(date1);
       long to  =  du.epochConvertor(date2);
-      
+      if(from >= to){
+          setMessage(response,"Fill appropriate Time-Interval");
+          return;
+      }
       if(periods!=null){
           repeat_gran = request.getParameter("repeat");    
           // get selected days of weeks
           int flag=0;
-          if(repeat_gran.equals("weekly")){
+      /*    if(repeat_gran.equals("weekly")){
             if(request.getParameterValues("dayAll")!=null){
                 weekDays[0] = 0;weekDays[1]=1;weekDays[2]=2;weekDays[3]=3;weekDays[4]=4;
                 weekDays[5]=5;weekDays[6]=6;
@@ -115,11 +118,10 @@ public class parseInp  extends HttpServlet {
                 }
                 
             }  
-          }
+          }*/
           
           // get ends at date 
           String ends = request.getParameter("ends");
-          System.out.println("ends "+ends);
             if(ends.equals("after")){
                 occur_count = request.getParameter("t");
                 int count = Integer.parseInt(occur_count);
@@ -128,13 +130,6 @@ public class parseInp  extends HttpServlet {
                     ArrayList<String> result =  callContiuosPeriodic(from,to,hostid,itemid,stastics,response,count,0,repeat_gran);
                     showOutput(stastics,result,request,response);
                 }
-
-                else if(flag==1){                       
-                   // callWeeklyPeriodic(from,to,hostid,itemid,stats,response,count,0,weekDays);
-                }
-                else {   
-                   // callMonthlyPeriodic(from,to,hostid,itemid,stats,response,count,0,monthDays);   
-                }    
 
             }else if(ends.equals("on")){
                 System.out.println(("end after date block"));
@@ -266,7 +261,6 @@ public class parseInp  extends HttpServlet {
         else if(repeat_gran.equals("Yearly")) return 3600*24*365;
         else return 0l;
     }
-    
     
     public float callContinuos(long date1,long date2,int hostid,int itemid,String stats,HttpServletResponse response){
         long from = 0;
@@ -408,6 +402,7 @@ public class parseInp  extends HttpServlet {
              if(str.equals(tableName[0])){
                  long temptotal = 0;
                  if(str.equals(tableName[1])){
+                     System.out.println("Both tables are equal");
                      total  = sf.total(date1,date2,tableName[0]);
                      return total;
                  }    
@@ -533,8 +528,6 @@ public class parseInp  extends HttpServlet {
                 }catch(Exception ex){
                     System.out.println("Problem in printing msg" + msg);
                 }
-
-
     }
 
     ArrayList getAdminFile(){

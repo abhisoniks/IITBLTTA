@@ -27,9 +27,16 @@
   
 </head>
 
-<body>
+<%
+        HttpSession session1=request.getSession(false);  
+        String name = (String)session.getAttribute("name");
+        if(name!=null){  
+            out.print("Hello, "+name);  
+            
+%>
+            <body>
     <br><br><br>
-     <a href = "index2.jsp" align ="left">LogOut</a>
+     <a href = "logout" method ="post" align ="left">LogOut</a>
     <form class="form-horizontal" role="form" method = "post" action="admin.do">
         <div class="form-group">
             <div class="col-sm-offset-2 col-sm-10">   
@@ -161,4 +168,15 @@
         
         
 </body>
+<%
+        }  
+        else{  
+            out.print("Please login first");  
+            request.getRequestDispatcher("adminlogin.jsp").include(request, response);  
+        }  
+
+%>
+
+
+
 </html>

@@ -57,8 +57,27 @@ public class statsfunc {
              System.out.println("Final query formed is "+ query);
              ResultSet rs   = su.selectQuery(query, al, con);  
              while(rs.next()){
-                            System.out.println("mini"+rs.getString("mini"));
-                            res = Long.parseLong(rs.getString("mini"));
+                    /*
+                        System.out.println("mini"+rs.getString("mini"));
+                        res = Long.parseLong(rs.getString("mini"));/*
+                    */
+                    String tmp = rs.getString("mini");
+                    if(tmp==null){
+                            //  Result is last row 
+                            String pu =null;
+                            if(table.equals("raw_data")) pu = "value";
+                            else pu = "maxTraffic";
+                            query = "select "+pu+" as mini from "+ table + " where"
+                                    + " hostid = ? and itemid = ? order by clock desc limit 1";
+
+                            al.clear();al.add(this.hostid);al.add(this.itemid);
+                            ResultSet rs2   = su.selectQuery(query, al, con);  
+                             while(rs2.next()){
+                                 res= Long.parseLong(rs2.getString("mini"));
+                             }  
+                    }else{
+                        res = Long.parseLong(tmp);
+                    }
                 }
                 
          }catch(Exception ex){

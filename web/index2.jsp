@@ -2,7 +2,7 @@
 <%@page import="java.text.SimpleDateFormat"%>
 <%@page import="java.text.DateFormat"%>
 <%@page import="java.util.ArrayList"%>
-<jsp:useBean id="formBean" class="Bean.form" class="Bean.form" scope="page"/>  
+<jsp:useBean id="formBean" class="Bean.form" class="Bean.form" scope="request"/>  
 <jsp:setProperty name="formBean" property="*"/>
 
 <!DOCTYPE html>
@@ -21,8 +21,9 @@
   <script type="text/javascript" src="http://cdn.rawgit.com/Eonasdan/bootstrap-datetimepicker/e8bddc60e73c1ec2475f827be36e1957af72e2ea/src/js/bootstrap-datetimepicker.js"></script>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/css/bootstrap-datepicker.css" />
-
- 
+   
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  
  <script type="text/javascript">
             $(function () {
                 $('#datetimepicker1').datetimepicker(
@@ -139,6 +140,30 @@ function select(){
     
     
 }
+ 
+ function validateInput(){
+     var date1 = document.getElementById('date1').value
+     if(date1 === ""){
+         alert('>>>')
+         document.getElementById('datetimepicker1').innerHTML =  "<span style='color: red;'>"+"Please select a Date"+"</span>"
+         return 
+     }
+     
+     var date2 = document.getElementById('date2').value
+     if(date2 === ""){
+         document.getElementById('date2').innerHTML =  "<span style='color: red;'>"+"Please Fill Date"+"</span>"
+        return 
+     }
+     
+     var host =document.getElementById('host').value
+     if(host === 'Select Host' ){
+        document.getElementById('host-msg').innerHTML =  "<span style='color: red;'>"+"Choose a Host"+"</span>"
+        return 
+     }
+     
+     showQuery();
+     return 
+ }
     
 
           
@@ -148,12 +173,12 @@ function select(){
 <body onload="select()">  
      <a href = "adminlogin.jsp">Admin Space</a>
     <div>
-    <form class="form-horizontal" role="form" method = "post" action="iitbltta.do">   
+    <form class="form-horizontal" role="form" method = "post" action="iitbltta.do" >   
         <div class="form-group">
              <div class="col-sm-offset-2 col-sm-10">
                  <div class='col-sm-4'>
                      <div class='input-group date' id='datetimepicker1'>
-                         <input type='text' name='date1' id='date1' value ="<%=formBean.getDate1()%>"  class="form-control"/>
+                         <input type='text' name='date1' id='date1' value ="<%=formBean.getDate1()%>"  class="form-control" />
                          <span class="input-group-addon">
                              <span class="glyphicon glyphicon-calendar"></span>
                          </span>
@@ -173,11 +198,11 @@ function select(){
             <div class="col-sm-offset-2 col-sm-10">
                 <table>
                     <tr>
-                        <td>
-                             Host : 
-                             <select name="host" id="host" size="1" >
+                        <td> <p class="text-info"> <b> Host Name </b> </p></td>
+                        <td padding: 10px 0;>
+                             <select name="host" id="host" size="1" class="form-control" data-style="btn-primary" >
                                  <option selected disabled>Select Host</option>
-                                    <option value="BGP">BGP</option>
+                                    <option value="BGP">  BGP </option>
                                     <option value="Transparent Proxy">Transparent Proxy</option>
                                     <option value="Netmon">Netmon</option>
                                     <option value="VPN">VPN</option>
@@ -185,60 +210,83 @@ function select(){
                                     <option value="Zabbix server">Zabbix server</option>
                                     <option value ="linux server">linux server</option>
                                 </select>
-
-                        </td>
+                        </td>       
+                        <td> <p class="text-info"> <b> Host Type </b> </td>
                         <td>
-                            Host Type
-                            <select id="host_det" name="host_det">
+                            <select id="host_det" name="host_det" class="form-control">
                             </select>
-                        </td> 
+                        </td>
+                        <td><div id = "host-msg"></div> </td>    
                     </tr>
                     <tr>
                         <td>
-                            Interface
-                            <select id="inter" name="inter">
+                           <p class="text-info"> <b> Interface </b> </p>
+                        </td>
+                        <td>
+                            <select id="inter" name="inter" class="form-control">
                             </select>
                         </td> 
                    
                         <td>
-                            Direction : 
-                            <select name="direction" size="1">
-                                <option value="Incoming">Incoming</option>
-                                <option value="Outgoing">Outgoing</option>
+                           <p class="text-info"> <b>  Traffic Direction : </b> </p>
+                        </td>
+                        <td>
+                            <select name="direction" id="direction" size="1" class="form-control">
+                                <option value="Incoming">Incoming Traffic</option>
+                                <option value="Outgoing">Outgoing Traffic</option>
                             </select>
                         </td>
-                    </tr>
-                    <tr>
-                        <td>
+                        <td></td>
+                    </tr>   
                         <div class="form-group"  >
                             <div class="col-sm-offset-2 col-sm-10">
                               <div class="checkbox">
-                                Select Statistics:<br>
+                         
+                         <fieldset>
+                         <tr>    
+                             <td> <legend style="font-size:17px;border:0"> <p class="text-info"> <b>  Select Statistics: </b> </p> </legend></td> 
+                             <td></td><td></td><td></td><td></td> 
+                         </tr>
+                         <tr>
                             <!--    <label>  <input  type="checkbox" onClick="toggle(this)" name="dayAll" value ="selectAll" /> Select All </label> <br/> -->
-                                <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Total"/>   Total  </label>
-                                <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Average"/> Average    </label>
-                                <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Minimum"/> Minimum   </label>
-                                <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Maximum"/> Maximum </label>
-                                <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Zero Traffic"/> Zero Traffic  </label>  
-                              </div>
+                            <td>    <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Total"/>   Total Traffic  </label>  </td>      
+                            <td>    <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Average"/> Average Traffic   </label>  </td>
+                            <td>    <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Minimum"/> Minimum Traffic  </label>  </td>      
+                            <td></td> <td></td> 
+                        </tr>
+                        <tr>
+                            <td>    <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Maximum"/> Maximum Traffic </label>  </td>      
+                            <td>    <label>  <input type="checkbox" name = "stats" id = "stats"  value = "Zero Traffic"/> Zero Traffic  </label> </td>      
+                            <td></td><td></td>
+                         </tr>    
+                        </fieldset> 
+                            </div>
                             </div>
                         </div>
-                        </td>      
-                    </tr>    
-                </table>    
+                       
+                    
+                    
             </div> 
         </div>    
-
         <div class="form-group">
              <div class="col-sm-offset-2 col-sm-10">
-                 <input type="checkbox" id = 'period' onclick="showrepeat()" name = "periodic"> Periodic Query </input>
-
+                
+                 <tr>
+                 <td><input type="checkbox" id = 'period' onclick="showrepeat()" name = "periodic"> Periodic Query </input></td>
+                 <td></td><td></td><td></td><td></td>
+                 </tr>    
+                 </table>                 
               </div>   
          </div>
+                        
         <div  id = "welcomeDiv"  style="display:none;"> 
              <div class="form-group">
                  <div class="col-sm-offset-2 col-sm-10">
-                     Repeats:  <select id = "repeat" onchange="showDay(this)" name = "repeat">
+                 <table>
+                 <tr>
+                  <td> <p class="text-info"> <b>  Repeats: </b> </p></td>
+                  <td>  <select id = "repeat" onchange="showDay(this)" name = "repeat" class="form-control">
+                           <option selected disabled>Select</option>
                          <option value="Half-Hourly">Half-Hourly</option>
                          <option value="Hourly">Hourly</option>
                          <option value="2-Hourly">2-Hourly</option>
@@ -248,79 +296,40 @@ function select(){
                        <!--  <option value="Weekend">Weekend</option>  -->
                          <option value="Yearly">Yearly</option>
                      </select>
+                  </td>    
+                  <td></td><td></td><td></td>
+                 </tr>
                  </div> 
              </div>    
-            <br>
-             <div class="form-group"  >
+            <div class="form-group">
                  <div class="col-sm-offset-2 col-sm-10">
-                   <div class="checkbox"  id = "dayCheck" style="display:none;">
-                     Following days of weeks:<br>
-                     <label>  <input  type="checkbox" onClick="toggle(this)" name="dayAll" value ="selectAll" /> Select All </label> <br/>
-                     <label>  <input type="checkbox" name = "day" id = "day"  value = "Sunday"/> Sunday    </label>
-                     <label>  <input type="checkbox" name = "day" id = "day"  value = "Monday"/> Monday    </label>
-                     <label>  <input type="checkbox" name = "day" id = "day"  value = "Tuesday"/> Tuesday   </label>
-                     <label>  <input type="checkbox" name = "day" id = "day"  value = "Wednesday"/> Wednesday </label>
-                     <label>  <input type="checkbox" name = "day" id = "day"  value = "Thursday"/> Thursday  </label>
-                     <label>  <input type="checkbox" name = "day" id = "day"  value = "Friday"/> Friday    </label>  
-                     <label>  <input type="checkbox" name = "day" id = "day"  value = "Saturday"/> Saturday  </label>    
-                   </div>
-                 </div>
-             </div>
-
-             <div class="form-group" >
-                 <div class="col-sm-offset-2 col-sm-10">
-                   <div class="checkbox"   id ="monthCheck" style="display:none;">
-                     Following days of Month: <br> 
-                     <label> <input type="checkbox" onClick="toggleMonth(this)" name = "monthAll" value ="monthAll" /> Select All </label> <br/>  
-                     <label> <input type="checkbox" name = "month" value = "1" /> 1 </label>
-                     <label> <input type="checkbox" name = "month" value = "2"/> 2  </label>
-                     <label>  <input type="checkbox" name = "month" value = "3"/> 3    </label>
-                     <label> <input type="checkbox" name = "month"  value = "4"/>   4   </label>
-                     <label>   <input type="checkbox" name = "month" value = "5"/>  5  </label>
-                     <label>   <input type="checkbox" name = "month" value = "6"/>  6  </label>  
-                     <label>   <input type="checkbox" name = "month"  value = "7"/> 7   </label>    
-                     <label>   <input type="checkbox" name = "month"  value = "8"/> 8   </label>    
-                     <label>   <input type="checkbox" name = "month" value = "9"/> 9   </label>    
-                     <label>   <input type="checkbox" name = "month"  value = "10"/> 10   </label>    
-                     <label>   <input type="checkbox" name = "month"  value = "11"/> 11  </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "12"/> 12   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "13"/>13   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "14"/>14   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "15"/>15   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "16" />16   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "17"/>17   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "18"/>18   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "19"/>19   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "20"/>20   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "21"/>21   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "22"/>22   </label>    
-                     <label>   <input type="checkbox"  name = "month"  value = "23"/>23  
-                     </label>  <label>   <input type="checkbox"  name = "month"  value = "24"/>24   </label>
-                     <label>   <input type="checkbox"  name = "month"  value = "25"/>25  
-                     </label>  <label>   <input type="checkbox"  name = "month"  value = "26"/>26   </label>
-                     <label>   <input type="checkbox"  name = "month"  value = "27"/>27  
-                     </label>  <label>   <input type="checkbox"  name = "month"  value = "28"/>28   </label>
-                     <label>   <input type="checkbox"  name = "month"  value = "29"/>29   </label>
-                     <label>   <input type="checkbox"  name = "month"  value = "30"/>30   </label>
-                     <label>   <input type="checkbox"  name = "month"  value = "31"/>31   </label>
-                   </div>
-                 </div>
-               </div>
-            
-            <br>
-                <div class="form-group">
-
-                     <div class="col-sm-offset-2 col-sm-10">
-                         Ends:
-                         <input type="radio" name="ends" value="after">After: <input type = "text" id = "t" name ="t" > occurrences<br>
-                         <input type="radio" name="ends" value="on">On <input type="text" id = "endAt" name="endAt" />  
-                     </div>    
-                </div> 
+                     <fieldset>
+                     <tr>
+                         <td> <legend style="font-size:16px;border:0"> <p class="text-info">
+                             <b> Repetation Ends : </b> </p> </legend>
+                         </td>
+                         <td></td><td></td><td></td><td></td>
+                     </tr>
+                     <tr>
+                        <td><input type="radio" name="ends" value="after">
+                        <b>  After: </b></td> 
+                        <td><input type = "text" id = "t" name ="t" class="form-control"> occurrences</td>
+                        <td></td><td></td><td></td>
+                     </tr>
+                     <tr>
+                        <td><input type="radio" name="ends" value="on" > On </td> 
+                        <td> <input type="text" id = "endAt" name="endAt"  class="form-control" /> </td>
+                        <td></td> <td></td><td></td>
+                     </tr>
+                     </fieldset>
+                </table>     
+                 </div>    
+            </div> 
         </div>     
 
         <div class="form-group">
           <div class="col-sm-offset-2 col-sm-10">
-             <button type="Button" class="btn btn-default" onclick="showQuery();" />Done</button>
+             <button type="Button" class="btn btn-default" onclick="validateInput();" />Done</button>
              <button type="submit" class="btn btn-default"/>Cancel</button>
           </div>
         </div>
@@ -333,20 +342,40 @@ function select(){
 
         <div class="form-group"  >
            <div class="col-sm-offset-2 col-sm-10" id = "subBut" style="display:none;">
-               <button type="submit" class="btn btn-default"/>Submit-Form</button>
+               <button type="submit" class="btn btn-default" />Submit-Form</button>
            </div>
         </div>    
 
      </form>
      </div>
-        <div id="result">
+                                         
+        <div id="result">  
             <pre>
-                        <table align = "center" style="font-family:arial;font-size: 20px" cellspacing="2" border="1">
-                        <tr>
-                            <td> From </td> <td> To </td> 
                 <%
                          ArrayList<String> al = (ArrayList<String>)request.getAttribute("Output");
                          if(al!=null){
+                %>
+                             
+                    <table align = "center" style="font-family:arial;font-size: 20px">
+                        <tr>
+                            <td style="padding:0 15px 0 15px;"> Host:<%=formBean.getHost()%> </td> 
+                            <td style="padding:0 15px 0 15px;"> HostType:<%=formBean.getHost_det()%></td>                                               
+                        </tr>
+                        <tr>
+                             <td style="padding:0 15px 0 15px;"> Interface:<%=formBean.getInter()%></td>          
+                              <td style="padding:0 15px 0 15px;"> Traffic Direction:<%=formBean.getDirection()%> </td> 
+                        </tr>
+                        <tr>
+                            
+                             <td style="padding:0 15px 0 15px;"> Repeat After:<%=formBean.getRepeat()%></td>          
+                            
+                        </tr>
+                    </table>   
+                    <table align = "center" style="font-family:arial;font-size: 20px" cellspacing="2" border="1">
+                        <tr>
+                        <td> From </td> <td> To </td> 
+                
+                <%
                              String[] statistics = (String[])request.getAttribute("stats");
                              for(String stats:statistics){
                                 stats = stats + "Traffic";
@@ -382,5 +411,5 @@ function select(){
         </div>
      
  </body>
-</html>>
+</html>
 
