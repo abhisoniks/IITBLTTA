@@ -1,32 +1,37 @@
-
 package modal;
 
-import java.io.BufferedReader;
-import java.sql.Connection;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
+import java.sql.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.ResultSet;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.*;
 import sql.*;
-import javax.servlet.http.HttpServlet;
 
 public class admin  extends HttpServlet{
+    ArrayList al = new ArrayList();
+    Connection con;
+    Connection con2;
+    
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
            throws ServletException, IOException {
       String option =  request.getParameter("buttonClicked");
+      try{
+            sqlutil su = new sqlutil();
+            con = su.getcon();
+        }catch(Exception ex){
+            System.out.println("exc");
+        }
+        try{
+            sqlutil2 su2 = new sqlutil2();
+            con2 = su2.getcon();
+        }catch(Exception ex){
+            System.out.println("exc2");
+     }
       if(option.equals("add")){
           add(request,response);
       }
@@ -35,8 +40,7 @@ public class admin  extends HttpServlet{
       }    
       else if(option.equals("modify")){
           modify(request,response);
-      }           
-
+      }        
     }
 
     void add(HttpServletRequest request, HttpServletResponse response){
@@ -82,7 +86,11 @@ public class admin  extends HttpServlet{
 
         String new_row = gran+"\t\t\t\t\t\t\t"+period+"\t\t\t\t\t\t\t"+table +
                 "\t\t\t\t\t"+g_unit+"\t\t\t\t"+p_unit;
-        File f = new File("/home/abhisoni/Downloads/IITB_PE/src/files/archivalInfo_admin_1");
+        
+            ServletContext context = request.getServletContext();
+            String path = context.getRealPath("/");
+            
+        File f = new File(path+"../../../IITB_PE/src/files/archivalInfo_admin");
         int flag=0;
           try {
                BufferedReader file = new BufferedReader(new FileReader(f));
@@ -100,6 +108,7 @@ public class admin  extends HttpServlet{
                    }
                    if(flag2==1){
                        inputBuffer.append(line);
+                       inputBuffer.append('\n');
                        continue;
                    }
                    int grn2 = Integer.parseInt(line.split("\\s+")[0]);
@@ -149,7 +158,7 @@ public class admin  extends HttpServlet{
                    return;
                  //  request.getRequestDispatcher("/admin.jsp").forward(request, response);
                }
-               if(flag_==0) writetoFile(inputBuffer);
+               if(flag_==0) writetoFile(request,inputBuffer);
           }
           catch(Exception ex){
                System.out.println("exception while writing modified changes");
@@ -159,7 +168,11 @@ public class admin  extends HttpServlet{
 
     void delete(HttpServletRequest request, HttpServletResponse response){
         String level = request.getParameter("adminradio");
-        File f = new File("/home/abhisoni/Downloads/IITB_PE/src/files/archivalInfo_admin_1");
+                ServletContext context = request.getServletContext();
+                String path = context.getRealPath("/");
+                System.out.println(path);
+              //   /home/abhisoni/NetBeansProjects/iitbltta_/build/web/
+             File f = new File(path+"../../../IITB_PE/src/files/archivalInfo_admin");
           try {
                BufferedReader file = new BufferedReader(new FileReader(f));
                String line;
@@ -173,6 +186,11 @@ public class admin  extends HttpServlet{
                boolean flag=true;
                boolean flag3=false;
                while ((line = file.readLine()) != null) {
+                   if(flag3==true){
+                       inputBuffer.append(line);
+                       inputBuffer.append('\n');
+                       continue;
+                   }
                    if(count > 0){
                        String[] str = line.split("\\s+");
                        gran_delete = gran_add ;
@@ -187,6 +205,7 @@ public class admin  extends HttpServlet{
                    }
                    if(count==Integer.parseInt(level)+1){
                      flag3=true;  
+                     System.out.println("before "+table_delete+" "+table_add);
                      flag =  updateTables(table_delete,table_add,gran_delete,gran_add);
                    }
 
@@ -196,46 +215,95 @@ public class admin  extends HttpServlet{
                }
                String inputStr = inputBuffer.toString();
                file.close();
-               writetoFile(inputBuffer);   
-               if(flag==true || flag3==false){
-                       if(flag)
-                               dropTable(table_delete);
-                       if(!flag3) dropTable(table_add);
-                       setMessage(response,"Level deleted Successfully");
+               writetoFile(request,inputBuffer);  
+               System.out.println("flag flag3"+flag+" "+flag3);
+               if(flag || !flag3){
+                    if(!flag3){
+                      //  System.out.println("####"+table_add);
+                        dropTable(table_add);
+                        setMessage(response,"Level deleted Successfully");
+                        return;
+                    }
+                    if(flag){  dropTable(table_delete);}
+                    
+                    setMessage(response,"Level deleted Successfully");
                }else{
-                       setMessage(response,"Deletion Unsuccessfull");
+                    setMessage(response,"Deletion Unsuccessfull");
                }
 
 
           }catch(Exception ex){
-               System.out.println("exception while writing modified changes");
+               System.out.println("exception in delete function");
                ex.printStackTrace();
           }
     }     
 
     void dropTable(String table_delete){
-           String query = "drop table "+table_delete;
-            sqlutil su = new sqlutil();
-           try{
-               Connection con = su.getcon();
-               new sqlutil().dropTable(query,con);
-           }catch(Exception ex){
-              System.out.println("table dropped");
-       }
+        System.out.println("dropping table"+table_delete);
+        String query = "drop table "+table_delete;
+        sqlutil su = new sqlutil();
+        try{
+            if(con == null)
+              con = su.getcon();
+            new sqlutil().dropTable(query,con);
+        }catch(Exception ex){
+           System.out.println("Exception in table dropped");
+        }
     }
-
+    
+    public HashMap<Integer,Integer> getItemList(){
+        HashMap<Integer,Integer> hm = new HashMap<Integer,Integer>();
+        ArrayList<Integer> temp = new ArrayList<Integer>();
+        addHost su  = new addHost();
+        Connection con = null;
+        try{
+            String query = "select itemid,hostid from items";
+            ArrayList al = new ArrayList();
+            con = su.getcon();
+            ResultSet rs = su.selectQuery(query, al, con);
+            int item=0;int host=0;
+            while(rs.next()){
+                item = Integer.parseInt(rs.getString("itemid"));
+                host = Integer.parseInt(rs.getString("hostid"));
+                hm.put(item, host);
+            }
+        }catch(Exception ex){
+            System.out.println("Exception in getting connection with addHost database");
+            ex.printStackTrace();
+            return null;
+            
+        }
+        return hm;
+    }
+    
     boolean updateTables(String table_prev, String table_curr, int gran_prev, int gran_curr){
-       System.out.println("tables info = "+ table_prev +" "+table_curr+" "+gran_prev+" "+gran_curr);
-       File f = new File("/home/abhisoni/Downloads/IITB_PE/src/files/hosts_file");
+       //System.out.println("tables info table delete table add gran delete gran add = "+ table_prev +" "+table_curr+" "+gran_prev+" "+gran_curr);
+        HashMap<Integer,Integer> hm = getItemList();
+        Iterator it = hm.entrySet().iterator();
+        int itemid=0;
+        int hostid = 0;
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next();
+            System.out.println(pair.getKey() + " = " + pair.getValue());
+            itemid = (int)pair.getKey();
+            hostid = (int)pair.getValue();
+            System.out.println(hostid + " && "+itemid+" "+hm.size());
+            deleteHI(hostid,itemid,table_prev,table_curr,gran_prev,gran_curr,con);
+        }
+        return true;
+    
+        /*   File f = new File("/home/abhisoni/NetBeansProjects/IITB_PE/src/files/hosts_file");
     try{
-        BufferedReader br = new BufferedReader(new FileReader(f));
+        /*BufferedReader br = new BufferedReader(new FileReader(f));
         String line,hostname,interface_name,key;
         int hostid=0,itemid=0;
         br.readLine();
         sqlutil2 su2 = new sqlutil2();
-        Connection con2 = su2.getcon();
+        if(con2==null)
+            con2 = su2.getcon();
         Zabbix_Info zi  = new Zabbix_Info();
-        Connection con = new sqlutil().getcon();
+        if(con==null)
+            con = new sqlutil().getcon();
         while((line = br.readLine()) != null){
             String[] str = line.split("\\s+");
             hostname = "%"+str[0]+"%";
@@ -252,19 +320,22 @@ public class admin  extends HttpServlet{
             ex.printStackTrace();
             return false;
         }
-        return true;
+    
+        return true;*/
     }
 
     boolean deleteHI(int hostid,int itemid,String table_prev,String table_curr,int gran_prev,int gran_curr,Connection con){
-          System.out.println(hostid+" HI"+ itemid);
+        //  System.out.println("table del table add hostid itemid"+ table_prev+" "+table_curr+" "+hostid+" "+itemid);
           statsfunc sf = new statsfunc(hostid,itemid);
           long row_count = sf.row_count(table_prev,con);
+          System.out.println("Row count is" + row_count);
+          if(row_count==0){System.out.println("Row count is zero");return true;}
           long p = gran_curr/gran_prev;
           boolean flag=true;
+          ResultSet rs=null;
           while(row_count/p > 0){
-              ResultSet rs = aggregate(hostid,itemid,table_prev,p);
+              rs = aggregate(hostid,itemid,table_prev,p);
               if(rs!=null){
-                  System.out.println("rs is not null");
                    boolean ins_res = insert(hostid,itemid,rs,table_curr,p);
                    deleteRows(p,table_prev,hostid,itemid);
                    if(ins_res==false) flag=false;
@@ -273,7 +344,7 @@ public class admin  extends HttpServlet{
               row_count-=p;
           }
           if(row_count!=0){
-              ResultSet rs = aggregate(hostid,itemid,table_prev,row_count);
+              rs = aggregate(hostid,itemid,table_prev,row_count);
               if(rs!=null){
                   System.out.println("rs is not null");
                   boolean ins_res = insert(hostid,itemid,rs,table_curr,row_count);
@@ -283,29 +354,33 @@ public class admin  extends HttpServlet{
                   return false;
               }
           }
+          System.out.println("flag is "+flag);
           return flag;
     }
 
     void deleteRows(long num,String table,int hostid,int itemid){
-        System.out.println("delete Rows "+table );
+        al.clear();
+     //   System.out.println("delete Rows from"+table );
        ResultSet rs=null;
-       sqlutil su2 = new sqlutil();
+       sqlutil su = new sqlutil();
        String query = "DELETE  from  "+ table+" where hostid = ? and itemid = ? order by clock asc limit ?";
-       ArrayList params = new ArrayList();
-       params.add(hostid); params.add(itemid); params.add(num);
+       // ArrayList al = new ArrayList();
+        al.add(hostid); al.add(itemid); al.add(num);
         try{
-           Connection con = su2.getcon();
-           int p = su2.ins_upd_del(query,params,con);
+           if(con==null) 
+            con = su.getcon();
+           int p = su.ins_upd_del(query,al,con);
            if(p>0);// System.out.println(p + "number of rows are deleted successfulyy");
            else System.out.println("Deletion unsuccessfull for "+hostid+" "+itemid);
         }catch(Exception ex){
             System.out.println("exception while deleting rows from prime table "+hostid+" "+itemid);
             ex.printStackTrace();
         }
-        params = null;
+        al.clear();
     }
 
     boolean insert(int hostid,int itemid,ResultSet rs,String table,long p){
+     //   System.out.println("Insert into "+table);
         float avgT=0f;
         long totalT = 0l;long minT = 0l;
         long maxT = 0l; long minC = 0l;
@@ -319,90 +394,104 @@ public class admin  extends HttpServlet{
             maxT = Long.parseLong(rs.getString("maxi"));
             zeroT = Long.parseLong(rs.getString("zero"));
            }
-            System.out.println("insert >> "+ hostid + " "+itemid+" "+minC+" "+maxT);
            String time = new dateUtil().dateConvertor(minC);
-           ArrayList params  = new ArrayList(); 
+          // ArrayList al  = new ArrayList(); 
            String query = "insert into "+table+
                    " (hostid,itemid,clock,Time,totalTraffic,avgTraffic,minTraffic,maxTraffic,zeroTraffic)"
                    + "values(?,?,?,?,?,?,?,?,?)";
-           params.add(hostid); params.add(itemid); params.add(minC);
-           params.add(time);params.add(totalT);params.add(avgT);params.add(minT);params.add(maxT);
-           params.add(zeroT);
+           al.add(hostid); al.add(itemid); al.add(minC);
+           al.add(time);al.add(totalT);al.add(avgT);al.add(minT);al.add(maxT);
+           al.add(zeroT);
            sqlutil su = new sqlutil();
            try{ 
-                   Connection con = su.getcon();
-                   int rs2 = su.ins_upd_del(query,params, con);
-                   if(rs2 > 0) return true;
-                   else{ System.out.println("Insertion after aggregation failed"); return false;}
+                if(con==null)
+                     con = su.getcon();
+                int rs2 = su.ins_upd_del(query,al, con);
+                if(rs2 > 0) return true;
+                else{ System.out.println("Insertion after aggregation failed"); return false;}
            }catch(Exception ex){
-                   System.out.println("Exception while inserting raw_data");
-                   ex.printStackTrace();
-                   return false;
+                System.out.println("Exception while inserting raw_data");
+                ex.printStackTrace();
+                al.clear();
+                return false;
            }
             }catch(Exception ex){
                 System.out.println("Excepion in retrieving from resultSet");
+                al.clear();
                 return false;
             }
     }
 
     ResultSet aggregate(int hostid,int itemid,String table,long p){
-        ArrayList al = new ArrayList();
+        al.clear();
+        System.out.println("In aggregation Hid Iid tab"+hostid+" "+itemid+table);
         String query = "select min(clock) as minclock, avg(avgTraffic) as avgi, sum(totalTraffic)"
                 + " as totali ,min(minTraffic) as mini" 
                 + ", max(maxTraffic) as maxi, sum(zeroTraffic) as zero from " +
                 "( select * from "+
                 table+   " where hostid = ?  and itemid = ? "
                 + "order by clock asc limit "+p +" )a";
-        System.out.println("deletion query is " +query);
+    //    System.out.println("deletion query is " +query);
         al.add(hostid); al.add(itemid); 
         sqlutil su = new sqlutil();
         try{
-            Connection con = su.getcon();
-            ResultSet rs = su.selectQuery(query, al, con);
+             if(con==null)
+                con = su.getcon();
+             ResultSet rs = su.selectQuery(query, al, con);
+             al.clear();
              return rs;
         }catch(Exception ex){
             System.out.println("Exception in aggregating stats");
             ex.printStackTrace();
+            al.clear();
             return null;
         }
     }
 
     void modify(HttpServletRequest request, HttpServletResponse response){
-           String level = request.getParameter("adminradio");
-           String new_value = request.getParameter("period"+level);
-           File f = new File("/home/abhisoni/Downloads/IITB_PE/src/files/archivalInfo_admin_1");
-          try {
-               // input the file content to the StringBuffer "input"
-               BufferedReader file = new BufferedReader(new FileReader(f));
-               String line;
-               StringBuffer inputBuffer = new StringBuffer();
-               String oldline=null;
-               int count=0;
-               while ((line = file.readLine()) != null) {
-                   if(count==Integer.parseInt(level)){
-                       oldline = line;
-                       String[] str = oldline.split("\\s+");
-                       line = str[0]+"\t\t\t\t\t\t\t"+new_value+"\t\t\t\t\t\t\t"+str[2];
-                   }
-                   inputBuffer.append(line);
-                   inputBuffer.append('\n');
-                   count++;
-               }
-               String inputStr = inputBuffer.toString();
-               file.close();
-               writetoFile(inputBuffer);
-               setMessage(response,"File Updated Successfully");
+        String level = request.getParameter("adminradio");
+        String new_value = request.getParameter("period"+level);
+        ServletContext context = request.getServletContext();
+        String path = context.getRealPath("/");
+        System.out.println(path);
+      //   /home/abhisoni/NetBeansProjects/iitbltta_/build/web/
+         File f = new File(path+"../../../IITB_PE/src/files/archivalInfo_admin");
+        try {
+             // input the file content to the StringBuffer "input"
+             BufferedReader file = new BufferedReader(new FileReader(f));
+             String line;
+             StringBuffer inputBuffer = new StringBuffer();
+             String oldline=null;
+             int count=0;
+             while ((line = file.readLine()) != null) {
+                if(count==Integer.parseInt(level)){
+                    oldline = line;
+                    String[] str = oldline.split("\\s+");
+                    line = str[0]+"\t\t\t\t\t\t\t"+new_value+"\t\t\t\t\t\t\t"+str[2];
+                }
+                inputBuffer.append(line);
+                inputBuffer.append('\n');
+                count++;
+             }
+             String inputStr = inputBuffer.toString();
+             file.close();
+             writetoFile(request,inputBuffer);
+             setMessage(response,"File Updated Successfully");
 
-          }catch(Exception ex){
-               System.out.println("exception while writing modified changes");
-               ex.printStackTrace();
-          }
+        }catch(Exception ex){
+             System.out.println("exception while writing modified changes");
+             ex.printStackTrace();
+        }
     }     
 
-    void writetoFile(StringBuffer inputBuffer){
+    void writetoFile(HttpServletRequest request, StringBuffer inputBuffer){
           try{
                String inputStr = inputBuffer.toString();
-               FileOutputStream fileOut = new FileOutputStream("/home/abhisoni/Downloads/IITB_PE/src/files/archivalInfo_admin_1");
+               ServletContext context = request.getServletContext();
+                String path = context.getRealPath("/");
+                System.out.println(path);
+              //   /home/abhisoni/NetBeansProjects/iitbltta_/build/web/
+               FileOutputStream fileOut = new FileOutputStream(path+"../../../IITB_PE/src/files/archivalInfo_admin");
                fileOut.write(inputStr.getBytes());
                fileOut.close();
           }catch(Exception ex){
@@ -423,28 +512,26 @@ public class admin  extends HttpServlet{
                   " maxTraffic bigint(15), " +
                   " zeroTraffic int(10)) "
                  ;
-               System.out.println(sql);
-               sqlutil su = new sqlutil();
-               Connection con = su.getcon();
-               su.creteTable(sql, con);
+        sqlutil su = new sqlutil();
+        if(con==null)
+             con = su.getcon();
+        su.creteTable(sql, con);
 
     }
 
     void setMessage(HttpServletResponse response,String msg){
-               System.out.println("output msg");
-                try{
-                    PrintWriter out = response.getWriter();
-                out.println("<html><body>");
-                out.println("<script type=\"text/javascript\">");
-                out.println("alert('"+msg+"')");
-                out.println("window.location.href='admin.jsp';");
-                out.println("</script>");
-                out.println("</body></html>");
-                }catch(Exception ex){
-                    System.out.println("Problem in printing msg" + msg);
-                }
-
-
+         System.out.println("output msg");
+         try{
+             PrintWriter out = response.getWriter();
+         out.println("<html><body>");
+         out.println("<script type=\"text/javascript\">");
+         out.println("alert('"+msg+"')");
+         out.println("window.location.href='admin.jsp';");
+         out.println("</script>");
+         out.println("</body></html>");
+         }catch(Exception ex){
+             System.out.println("Problem in printing msg" + msg);
+         }
     }
     
     void addHost(){

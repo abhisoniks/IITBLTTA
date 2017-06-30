@@ -30,8 +30,23 @@ public class statsfunc {
              System.out.println("Final query formed is "+ query);
              ResultSet rs   = su.selectQuery(query, al, con);  
              while(rs.next()){
-                            System.out.println("total"+rs.getString("total"));
-                            res = Long.parseLong(rs.getString("total"));
+                    System.out.println("total"+rs.getString("total"));
+                    String tmp = rs.getString("total");
+                    if(tmp==null){
+                        String pu =null;
+                        if(table.equals("raw_data")) pu = "value";
+                        else pu = "totalTraffic";
+                        query = "select "+pu+" as total from "+ table + " where"
+                                + " hostid = ? and itemid = ? order by clock desc limit 1";
+
+                        al.clear();al.add(this.hostid);al.add(this.itemid);
+                        ResultSet rs2   = su.selectQuery(query, al, con);  
+                         while(rs2.next()){
+                             res= Long.parseLong(rs2.getString("total"));
+                         }  
+                    }else{
+                        res = Long.parseLong(tmp);
+                    }                    
                 }
                 
          }catch(Exception ex){
@@ -57,16 +72,12 @@ public class statsfunc {
              System.out.println("Final query formed is "+ query);
              ResultSet rs   = su.selectQuery(query, al, con);  
              while(rs.next()){
-                    /*
-                        System.out.println("mini"+rs.getString("mini"));
-                        res = Long.parseLong(rs.getString("mini"));/*
-                    */
                     String tmp = rs.getString("mini");
                     if(tmp==null){
                             //  Result is last row 
                             String pu =null;
                             if(table.equals("raw_data")) pu = "value";
-                            else pu = "maxTraffic";
+                            else pu = "minTraffic";
                             query = "select "+pu+" as mini from "+ table + " where"
                                     + " hostid = ? and itemid = ? order by clock desc limit 1";
 

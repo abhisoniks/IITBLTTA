@@ -1,156 +1,102 @@
-
 package modal;
 import static com.sun.org.apache.xalan.internal.lib.ExsltDatetime.dateTime;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.sql.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
+import java.text.*;
+import java.time.*;
 import java.time.temporal.TemporalAccessor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
+import java.util.*;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.*;
 import sql.*;
 import Bean.form;
+import javax.servlet.ServletContext;
 
 public class parseInp  extends HttpServlet {
-    
+    long diff =0;
+    boolean noresult=false;
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+            throws ServletException, IOException {  
+      noresult = false;
       String date1  = request.getParameter("date1");
       String date2 =  request.getParameter("date2");
-      System.out.println(date1+" date  "+date2);
       String host = request.getParameter("host");
       if(host.equals("VPN")) host="dwar";
       if(!(host.equals("BGP")) && !(host.equals("VPN"))){
           host = request.getParameter("host_det");
           host=host+".iitb.ac.in";
       }
-      System.out.println("host is "+host);
-      String interf = request.getParameter("interfac");
-      interf = "eth0";
+      String interf = request.getParameter("inter");
+      //interf = "eth0";
       String direction = request.getParameter("direction");
-      // String stats = request.getParameter("stats");
       String[] stastics = request.getParameterValues("stats");
       String periods = request.getParameter("periodic");
       String repeat_gran=null;
-   //   int[] weekDays=new int[7];
-   //   Arrays.fill(weekDays, -1);
-  //    int[] monthDays = new int[32]; 
-  //    Arrays.fill(monthDays, -1);
       String endDate=null;
       String occur_count=null;
       // get hostid and itemid 
-        sqlutil2 su2 = new sqlutil2();
-        int hostid=0;
-        int itemid=0;
-        Connection con = null;
-        try{
-            con = su2.getcon();
-            Zabbix_Info zi = new Zabbix_Info();
-            hostid = zi.gethostid(host, con);
-            interf = "%"+interf+"%";
-            direction  = "%"+direction+"%"+"traffic"+"%";
-            itemid = zi.getItemid(hostid, interf, direction, con);
-            System.out.println("hostid>>"+hostid);
-            System.out.println(">>"+itemid);
-        }catch(Exception ex){
-            System.out.println("Server Down");
-            setMessage(response,"Server down");
-        }finally{
-            closeDBconnection(con);
-        }
+      sqlutil2 su2 = new sqlutil2();
+      int hostid=0;
+      int itemid=0;
+      Connection con = null;
+      try{
+         con = su2.getcon();
+         Zabbix_Info zi = new Zabbix_Info();
+         hostid = zi.gethostid(host, con);
+         interf = "%"+interf+"%";
+         direction  = "%"+direction+"%"+"traffic"+"%";
+         itemid = zi.getItemid(hostid, interf, direction, con);
+         System.out.println("hostid>>"+hostid);
+         System.out.println("Itemid >>"+itemid);
+      }catch(Exception ex){
+         System.out.println("Server Down");
+         setMessage(response,"Server down");
+      }finally{
+         closeDBconnection(con);
+      }
+      if(hostid==0||itemid==0){
+          setMessage(response,"Unable to recognise host or other parameter, Please try later");
+          return;
+      }
            
       DateFormat dateFormat = new SimpleDateFormat("dd/MMM/yyyy hh:mm");
       dateUtil du = new dateUtil();
       long from = du.epochConvertor(date1);
       long to  =  du.epochConvertor(date2);
-      if(from >= to){
-          setMessage(response,"Fill appropriate Time-Interval");
-          return;
+      diff = to-from;
+     // System.out.println("diff is "+diff);
+      long now = System.currentTimeMillis() / 1000L;
+      if(from >= to || to>now){
+        setMessage(response,"Fill appropriate Time-Interval");
+        return;
       }
-      if(periods!=null){
+        if(periods!=null){
           repeat_gran = request.getParameter("repeat");    
-          // get selected days of weeks
           int flag=0;
-      /*    if(repeat_gran.equals("weekly")){
-            if(request.getParameterValues("dayAll")!=null){
-                weekDays[0] = 0;weekDays[1]=1;weekDays[2]=2;weekDays[3]=3;weekDays[4]=4;
-                weekDays[5]=5;weekDays[6]=6;
-            }else{
-                flag=1;
-                String[] str = request.getParameterValues("day");
-                for(int k=0;k<str.length;k++){
-                    if(str[k]=="Sunday") weekDays[0]=0;
-                    else if(str[k]=="Sunday") weekDays[0]=1;
-                    else if(str[k]=="Monday") weekDays[0]=2;
-                    else if(str[k]=="Tuesday") weekDays[0]=3;
-                    else if(str[k]=="Wednesday") weekDays[0]=4;
-                    else if(str[k]=="Thursday") weekDays[0]=5;
-                    else if(str[k]=="Saturday") weekDays[0]=6;
-                }
-            }
-          }
-          
-          // get selectd days of month
-          else if(repeat_gran.equals("monthly")){
-            if(request.getParameterValues("monthAll")!=null){
-                for(int i=1;i<=31;i++)
-                    monthDays[i] = i;
-            }else{
-                flag=2;
-                String[] temp = request.getParameterValues("month");
-                for(int k=0;k<temp.length;k++){
-                    int p = Integer.parseInt(temp[k]);
-                    monthDays[p] = p;
-                    System.out.println("Month days are" + monthDays[0]);
-                }
-                
-            }  
-          }*/
-          
-          // get ends at date 
-          String ends = request.getParameter("ends");
-            if(ends.equals("after")){
-                occur_count = request.getParameter("t");
-                int count = Integer.parseInt(occur_count);
-                System.out.println(("number of ocuurenece block"));
-                if(flag==0){
-                    ArrayList<String> result =  callContiuosPeriodic(from,to,hostid,itemid,stastics,response,count,0,repeat_gran);
-                    showOutput(stastics,result,request,response);
-                }
 
-            }else if(ends.equals("on")){
-                System.out.println(("end after date block"));
-                endDate = request.getParameter("endAt");
-                long till = du.epochConvertor(endDate);
-                if(flag==0){
-                    ArrayList<String> result = callContiuosPeriodic(from,to,hostid,itemid,stastics,response,till,1,repeat_gran);
-                    showOutput(stastics,result,request,response);
-                }
-                else if(flag==1){
-                  //  callWeeklyPeriodic(from,to,hostid,itemid,stats,response,till,1,weekDays);
-                }
-                else {
-                  //      callMonthlyPeriodic(from,to,hostid,itemid,stats,response,till,1,monthDays);   
-                }         
-            }    
+        String repeatEnd = request.getParameter("repeatEnd");
+        if(repeatEnd.equals("n")){
+          occur_count = request.getParameter("t");
+          int count = Integer.parseInt(occur_count);
+          if(flag==0){
+              ArrayList<String> result =  callContiuosPeriodic(from,to,hostid,itemid,stastics,response,count,0,repeat_gran,request);
+              showOutput(stastics,result,request,response);
+          }
+        }else{
+          endDate = request.getParameter("endAt");
+       //   System.out.println("End At="+endDate);
+          long till = du.epochConvertor(endDate);
+          if(flag==0){
+              ArrayList<String> result = callContiuosPeriodic(from,to,hostid,itemid,stastics,response,till,1,repeat_gran,request);
+              showOutput(stastics,result,request,response);
+          }
+        }    
       }else{
           String tempRes =date1+"&&"+date2;
           ArrayList<String> result = new ArrayList<String>();
           for(String stats : stastics){
-            float res = callContinuos(from,to,hostid,itemid,stats,response);
+            float res = callContinuos(from,to,hostid,itemid,stats,response,request);
             tempRes +="&&"+res;
             System.out.println(">>> stats"+ from +" "+ to+" "+res);
           }
@@ -169,27 +115,27 @@ public class parseInp  extends HttpServlet {
     }
     
     void showOutput(String[] statstics,ArrayList<String> res,HttpServletRequest request,HttpServletResponse response) throws ServletException, IOException{
-          System.out.println("In output "+res.get(0));
+          
+        //  System.out.println("In output "+res.get(0));
+         System.out.println("noresult is "+noresult);
+          if(noresult){ setMessage(response,"Result is not available at this granularity for select time-period");return;}
           request.setAttribute("Output",res);
           request.setAttribute("stats",statstics);
           request.getRequestDispatcher("/index2.jsp").forward(request, response);
-          
     }
    
-    public ArrayList<String> callContiuosPeriodic(long date1,long date2,int hostid,int itemid,String[] statistics,HttpServletResponse response,long till,int flag,String repeat_gran)
+    public ArrayList<String> callContiuosPeriodic(long date1,long date2,int hostid,int itemid,String[] statistics,HttpServletResponse response,long till,int flag,String repeat_gran,HttpServletRequest request)
     {   
-       
         long p = findperiod(repeat_gran); 
-        System.out.println("repeat_gran is "+repeat_gran);
         long count = 0;
         if(flag==0) count = 0;
         else count = date1;
         ArrayList<String> result = new ArrayList<String>();
+        long now = System.currentTimeMillis() / 1000L;
         while(count < till){
-            System.out.println("count "+count);
             String tempRes = "";
             for(String stats:statistics){
-                    float temp = callContinuos(date1,date2,hostid,itemid,stats,response);
+                    float temp = callContinuos(date1,date2,hostid,itemid,stats,response,request);
                     tempRes += temp+"&&"; 
             }
             String date1_format = new dateUtil().dateConvertor(date1);
@@ -201,56 +147,15 @@ public class parseInp  extends HttpServlet {
             if(flag==1 && !(count < till)){
                 date2_format = new dateUtil().dateConvertor(till);
                 tempRes = date1_format + "&&" +date2_format + "&&"+ tempRes;
-                System.out.println("result is "+tempRes);
-               // result.add(date1_format + "&&"+date2_format +"&&"+temp);
                result.add(tempRes);
                 break;
             }
-            //result.add(date1_format + "&&"+date2_format +"&&"+temp);
-              System.out.println("result is "+date1_format + "&&"+date2_format +"&&"+tempRes);  
-              result.add(date1_format + "&&"+date2_format +"&&"+tempRes);   
+            result.add(date1_format + "&&"+date2_format +"&&"+tempRes);
+            if(date2>now) return result;
         }
         return result;
     }
-      
-    public float callWeeklyPeriodic(long date1,long date2,int hostid,int itemid,String stats,HttpServletResponse response,long till,int flag,int[] weekDays){
-        long count=0;
-        if(flag==0)
-            count = 0;
-        else count =date1;
-        int c = 7;
-        float res = 0f;
-        dateUtil du = new dateUtil();
-        while(count < till){
-                 int i =0 ;
-                 if(stats.equals("min")){   
-                     float tempMin=0f;
-                     while(i++<c){
-                        int day = du.WeekDayExtractor(date1); 
-                        if(weekDays[day]==-1)continue;
-                        float temp = callContinuos(date1,date2,hostid,itemid,stats,response);
-                        tempMin = temp < tempMin ? temp :tempMin;
-                        date1 = date1+(24*3600); // increase by 1 day
-                        date2 = date2 + (24*3600);
-                    }
-                        res = tempMin < res ? tempMin :res;
-                        System.out.println("Min for week" + date1 +" "+res);
-                        count = (flag==0?count+1:date1);
-                  }
-                  
-        }
-        return 0f;
-    }
-    
-    public float callMonthlyPeriodic(long date1,long date2,int hostid,int itemid,String stats,HttpServletResponse response,long till,int flag,int[] monthDays){
-       long count=0;
-        if(flag==0)
-            count = 0;
-        else count =date1;
-        
-        return 0f;
-    }
-    
+       
     public long findperiod(String repeat_gran){
         if(repeat_gran.equals("Hourly")) return 3600;
         else if(repeat_gran.equals("Half-Hourly"))  return 1800;
@@ -262,11 +167,11 @@ public class parseInp  extends HttpServlet {
         else return 0l;
     }
     
-    public float callContinuos(long date1,long date2,int hostid,int itemid,String stats,HttpServletResponse response){
+    public float callContinuos(long date1,long date2,int hostid,int itemid,String stats,HttpServletResponse response,HttpServletRequest request){
         long from = 0;
         long to = 0;
         System.out.println("In continuos");
-        ArrayList al = getAdminFile();
+        ArrayList al = getAdminFile(request);
         long now = System.currentTimeMillis() / 1000L;
        // now = now-43257; // 
         dateUtil du = new dateUtil();
@@ -290,7 +195,10 @@ public class parseInp  extends HttpServlet {
                 System.out.println("from table"+ tableName[0]);
                 System.out.println("to table"+ tableName[1]);
                 float f = getResult(date1,date2,hostid,itemid,stats,tableName,al);
-                return f;
+                System.out.println(stats+" "+f+" "+date1+" "+date2);
+                if(stats.equals("Total"))
+                    return f/1000000000;
+                else return f/1000000;
             }
                         
         }
@@ -304,7 +212,6 @@ public class parseInp  extends HttpServlet {
             periodList.add(Integer.parseInt(temp.get(1)));
             tableList.add(temp.get(2));
         }
-        System.out.println("^^^"+tableList);
         statsfunc sf = new statsfunc(hostid,itemid);
         int flag=0;     
         long min = Long.MAX_VALUE;
@@ -427,28 +334,29 @@ public class parseInp  extends HttpServlet {
     }             
 
     float getResult(long date1,long date2,int hostid,int itemid,String stats,String[] tableName,ArrayList<ArrayList<String>> Adminfile){
-          if(stats.equals("Minimum")){
-            return  getMin(date1,date2,hostid,itemid,stats,tableName,Adminfile);
-          }
-          else if(stats.equals("Maximum")){
-            return  getMax(date1,date2,hostid,itemid,stats,tableName,Adminfile);
-          }
-          else if(stats.equals("Average")){
-               return  getAvg(date1,date2,hostid,itemid,stats,tableName,Adminfile);
+        if(stats.equals("Minimum")){
+          return  getMin(date1,date2,hostid,itemid,stats,tableName,Adminfile);
+        }
+        else if(stats.equals("Maximum")){
+          return  getMax(date1,date2,hostid,itemid,stats,tableName,Adminfile);
+        }
+        else if(stats.equals("Average")){
+             return  getAvg(date1,date2,hostid,itemid,stats,tableName,Adminfile);
 
-          }
-          else if(stats.equals("Total")){
-            return  getTotal(date1,date2,hostid,itemid,stats,tableName,Adminfile);
+        }
+        else if(stats.equals("Total")){
+          return  getTotal(date1,date2,hostid,itemid,stats,tableName,Adminfile);
 
-          }else{
-              System.out.println("stats did not match");
-              return 0f;
-          }          
+        }else{
+            System.out.println("stats did not match");
+            return 0f;
+        }          
     }
 
     String[] getTableName(ArrayList<ArrayList<String>> al,long from,long to,long current,HttpServletResponse response,int hostid,int itemid){
-        System.out.println(from +" "+to+" "+current);
+        //System.out.println(from +" "+to+" "+current);
         String[] res = new String[2];
+        System.out.println(al);
         for(ArrayList<String> temp : al){
             String table = temp.get(2);
             long minClock = getMinClock(table,hostid,itemid);
@@ -456,16 +364,17 @@ public class parseInp  extends HttpServlet {
             if(minClock==0||maxClock==0) setMessage(response,"No stats for this time period");
             long var = Long.parseLong(temp.get(0))*60;
             maxClock+=var;
-            System.out.println(table+" "+minClock+" "+maxClock);
-            if(to>= minClock-60 && to<=maxClock-60 && res[1]==null)  {res[1]=table;}
+            if(to>= minClock-60 && to<=maxClock-60 && res[1]==null)  {
+                res[1]=table;
+                if(diff < var){
+                    noresult = true;
+                } 
+            }
             if(from>=minClock-60 && from<=maxClock-60){
                  res[0] = table;
-                 System.out.println("Table>>"+ res[0]+" "+res[1]);
                  return res;
             }
         }
-        
-        System.out.println("No stats for this period");
         setMessage(response,"No stats for this time period");
         return null;
 
@@ -475,7 +384,7 @@ public class parseInp  extends HttpServlet {
         ArrayList al = new ArrayList();
         String query = "select min(clock) as mini from "+ table+" where hostid =? and itemid = ?";
         al.add(hostid);al.add(itemid);
-        System.out.println(query+" "+hostid+" "+itemid);
+       // System.out.println(query+" "+hostid+" "+itemid);
         long res=0;
         Connection con = null;
         try{
@@ -516,7 +425,7 @@ public class parseInp  extends HttpServlet {
     }
     
     void setMessage(HttpServletResponse response,String msg){
-               System.out.println("output msg");
+         
                 try{
                 PrintWriter out = response.getWriter();
                 out.println("<html><body>");
@@ -530,9 +439,13 @@ public class parseInp  extends HttpServlet {
                 }
     }
 
-    ArrayList getAdminFile(){
+    ArrayList getAdminFile(HttpServletRequest request){
     ArrayList<ArrayList<String>> al = new ArrayList<ArrayList<String>>();
-     File f = new File("/home/abhisoni/Downloads/IITB_PE/src/files/archivalInfo_admin_1");
+            ServletContext context = request.getServletContext();
+                String path = context.getRealPath("/");
+                System.out.println(path);
+              //   /home/abhisoni/NetBeansProjects/iitbltta_/build/web/
+             File f = new File(path+"../../../IITB_PE/src/files/archivalInfo_admin"); 
      int flag=0;
        try {
             BufferedReader file = new BufferedReader(new FileReader(f));
